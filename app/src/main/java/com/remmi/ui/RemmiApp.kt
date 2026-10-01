@@ -1,31 +1,32 @@
 package com.remmi.ui
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
+import com.remmi.core.RemmiApplication
+import com.remmi.core.host.RemmiHost
+import com.remmi.ui.home.HomeScreen
+import com.remmi.ui.theme.RemmiPreferences
+import com.remmi.ui.theme.RemmiTheme
 
 @Composable
-fun RemmiApp() {
-    Scaffold(
-        modifier = Modifier.fillMaxSize()
-    ) { innerPadding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = "Welcome to Remmi",
-                style = MaterialTheme.typography.headlineMedium,
-                color = MaterialTheme.colorScheme.onBackground
-            )
-        }
+fun RemmiApp(host: RemmiHost? = null) {
+    val context = LocalContext.current
+    val effectiveHost = host ?: (context.applicationContext as? RemmiApplication)?.host ?: RemmiHost()
+
+    val preferences = remember(context) { RemmiPreferences.getInstance(context) }
+    val currentTheme by preferences.theme.collectAsState()
+    val currentAccent by preferences.accent.collectAsState()
+
+    RemmiTheme(
+        appTheme = currentTheme,
+        appAccent = currentAccent
+    ) {
+        HomeScreen(
+            host = effectiveHost,
+            preferences = preferences
+        )
     }
 }
