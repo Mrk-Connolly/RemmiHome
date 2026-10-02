@@ -7,6 +7,8 @@ import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.content.ContextCompat
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.core.graphics.drawable.toBitmap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -89,10 +91,21 @@ class AndroidLauncherCapability(
                         val packageName = resolveInfo.activityInfo.packageName
                         val activityName = resolveInfo.activityInfo.name
                         if (packageName.isNotEmpty() && activityName.isNotEmpty() && (packageName != context.packageName)) {
+                            val iconDrawable = try {
+                                resolveInfo.loadIcon(pm)
+                            } catch (_: Exception) {
+                                null
+                            }
+                            val iconBitmap = try {
+                                iconDrawable?.toBitmap(width = 96, height = 96)?.asImageBitmap()
+                            } catch (_: Exception) {
+                                null
+                            }
                             RemmiAppInfo(
                                 packageName = packageName,
                                 activityName = activityName,
                                 label = label,
+                                icon = iconBitmap
                             )
                         } else null
                     }.sortedBy { it.label.lowercase() }.toList()

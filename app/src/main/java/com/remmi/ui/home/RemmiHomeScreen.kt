@@ -1,6 +1,7 @@
 package com.remmi.ui.home
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -301,12 +302,20 @@ private fun GlobalSearchResultItem(
                 color = colors.surfaceSubtle
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Text(
-                        text = result.appInfo.label.take(1).uppercase(),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = colors.textPrimary,
-                        fontWeight = FontWeight.Bold
-                    )
+                    if (result.appInfo.icon != null) {
+                        Image(
+                            bitmap = result.appInfo.icon,
+                            contentDescription = result.appInfo.label,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else {
+                        Text(
+                            text = result.appInfo.label.take(1).uppercase(),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = colors.textPrimary,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
             Spacer(modifier = Modifier.width(12.dp))
@@ -370,12 +379,20 @@ private fun FavoriteAppItem(
             color = colors.surfaceSubtle
         ) {
             Box(contentAlignment = Alignment.Center) {
-                Text(
-                    text = appInfo.label.take(1).uppercase(),
-                    style = MaterialTheme.typography.titleLarge,
-                    color = colors.textPrimary,
-                    fontWeight = FontWeight.Bold
-                )
+                if (appInfo.icon != null) {
+                    Image(
+                        bitmap = appInfo.icon,
+                        contentDescription = appInfo.label,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    Text(
+                        text = appInfo.label.take(1).uppercase(),
+                        style = MaterialTheme.typography.titleLarge,
+                        color = colors.textPrimary,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
         Spacer(modifier = Modifier.height(4.dp))

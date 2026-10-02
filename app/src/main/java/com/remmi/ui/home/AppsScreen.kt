@@ -1,5 +1,6 @@
 package com.remmi.ui.home
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -370,12 +371,20 @@ private fun RecentAppCard(
                 color = colors.accentSoft
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Text(
-                        text = appInfo.label.take(1).uppercase(),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = colors.textPrimary,
-                        fontWeight = FontWeight.Bold
-                    )
+                    if (appInfo.icon != null) {
+                        Image(
+                            bitmap = appInfo.icon,
+                            contentDescription = appInfo.label,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else {
+                        Text(
+                            text = appInfo.label.take(1).uppercase(),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = colors.textPrimary,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
             Spacer(modifier = Modifier.height(4.dp))
@@ -444,12 +453,20 @@ private fun AppLauncherCard(
                     color = colors.surfaceSubtle
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        Text(
-                            text = appInfo.label.take(1).uppercase(),
-                            style = MaterialTheme.typography.titleLarge,
-                            color = colors.textPrimary,
-                            fontWeight = FontWeight.Bold
-                        )
+                        if (appInfo.icon != null) {
+                            Image(
+                                bitmap = appInfo.icon,
+                                contentDescription = appInfo.label,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        } else {
+                            Text(
+                                text = appInfo.label.take(1).uppercase(),
+                                style = MaterialTheme.typography.titleLarge,
+                                color = colors.textPrimary,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
                 Spacer(modifier = Modifier.height(8.dp))
