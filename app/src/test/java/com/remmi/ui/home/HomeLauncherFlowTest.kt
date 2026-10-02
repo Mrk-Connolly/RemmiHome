@@ -95,4 +95,25 @@ class HomeLauncherFlowTest {
         launcher.refreshInstalledApps()
         assertEquals(3, launcher.installedApps.value.size)
     }
+
+    @Test
+    fun launcherUserFlow_launchAppAndResetSearchQuery() = runBlocking {
+        val launcher = FakeLauncherCapability()
+        launcher.refreshInstalledApps()
+
+        var searchQuery = "cam"
+        val apps = launcher.installedApps.value
+        val matched = apps.find { it.label.contains(searchQuery, ignoreCase = true) }
+
+        assertTrue(matched != null)
+        val success = launcher.launchApp(matched!!)
+
+        if (success) {
+            searchQuery = ""
+        }
+
+        assertTrue(success)
+        assertEquals("", searchQuery)
+        assertEquals("com.example.camera", launcher.launchedApp?.packageName)
+    }
 }

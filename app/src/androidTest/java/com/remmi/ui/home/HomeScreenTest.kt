@@ -228,4 +228,24 @@ class HomeScreenTest {
 
         assertEquals("com.example.camera", launcher.launchedApp?.packageName)
     }
+
+    @Test
+    fun homeScreen_globalSearchOnHome_clearsSearchQueryOnLaunch() {
+        val launcher = TestLauncherCapability()
+        val host = RemmiHost(launcherCapability = launcher)
+
+        composeTestRule.setContent {
+            RemmiTheme {
+                HomeScreen(host = host)
+            }
+        }
+
+        composeTestRule.onNodeWithContentDescription("Search applications").performTextInput("cam")
+        composeTestRule.onNodeWithText("SEARCH RESULTS").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("Launch Camera").performClick()
+
+        assertEquals("com.example.camera", launcher.launchedApp?.packageName)
+        composeTestRule.onNodeWithText("FAVORITE APPS").assertIsDisplayed()
+        composeTestRule.onNodeWithText("SEARCH RESULTS").assertDoesNotExist()
+    }
 }

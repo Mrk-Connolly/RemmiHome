@@ -5,6 +5,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
+import android.os.Build
+import androidx.core.content.ContextCompat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -20,13 +22,13 @@ import kotlinx.coroutines.withContext
  */
 class AndroidLauncherCapability(
     private val context: Context,
-    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
 ) : RemmiLauncherCapability {
 
     private val _installedApps = MutableStateFlow<List<RemmiAppInfo>>(emptyList())
     override val installedApps: StateFlow<List<RemmiAppInfo>> = _installedApps.asStateFlow()
 
-    private val _isDiscovering = MutableStateFlow(false)
+    private val _isDiscovering = MutableStateFlow(value = false)
     override val isDiscovering: StateFlow<Boolean> = _isDiscovering.asStateFlow()
 
     private val packageChangeReceiver = object : BroadcastReceiver() {
@@ -50,8 +52,13 @@ class AndroidLauncherCapability(
                 addAction(Intent.ACTION_PACKAGE_REPLACED)
                 addDataScheme("package")
             }
-            context.applicationContext.registerReceiver(packageChangeReceiver, filter)
-        } catch (e: Exception) {
+            ContextCompat.registerReceiver(
+                context.applicationContext,
+                packageChangeReceiver,
+                filter,
+                ContextCompat.RECEIVER_NOT_EXPORTED,
+            )
+        } catch (_: Exception) {
             // Context registration safety
         }
     }
@@ -65,20 +72,25 @@ class AndroidLauncherCapability(
                     val mainIntent = Intent(Intent.ACTION_MAIN, null).apply {
                         addCategory(Intent.CATEGORY_LAUNCHER)
                     }
-                    val resolveInfos = pm.queryIntentActivities(mainIntent, 0)
-                    resolveInfos.mapNotNull { resolveInfo ->
+                    val resolveInfos = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        pm.queryIntentActivities(mainIntent, PackageManager.ResolveInfoFlags.of(0L))
+                    } else {
+                        @Suppress("DEPRECATION")
+                        pm.queryIntentActivities(mainIntent, 0)
+                    }
+                    resolveInfos.asSequence().mapNotNull { resolveInfo ->
                         val label = resolveInfo.loadLabel(pm).toString()
                         val packageName = resolveInfo.activityInfo.packageName
                         val activityName = resolveInfo.activityInfo.name
-                        if (packageName.isNotEmpty() && activityName.isNotEmpty() && packageName != context.packageName) {
+                        if (packageName.isNotEmpty() && activityName.isNotEmpty() && (packageName != context.packageName)) {
                             RemmiAppInfo(
                                 packageName = packageName,
                                 activityName = activityName,
-                                label = label
+                                label = label,
                             )
                         } else null
-                    }.sortedBy { it.label.lowercase() }
-                } catch (e: Exception) {
+                    }.sortedBy { it.label.lowercase() }.toList()
+                } catch (_: Exception) {
                     _installedApps.value
                 }
             }
@@ -97,7 +109,7 @@ class AndroidLauncherCapability(
             }
             context.startActivity(intent)
             true
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             false
         }
     }

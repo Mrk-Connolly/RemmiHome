@@ -13,12 +13,15 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {
-                // Home launcher activity should remain active on Back press
-                moveTaskToBack(true)
-            }
-        })
+        onBackPressedDispatcher.addCallback(
+            this,
+            object : OnBackPressedCallback(enabled = true) {
+                override fun handleOnBackPressed() {
+                    // Home launcher activity should remain active on Back press
+                    moveTaskToBack(true)
+                }
+            },
+        )
 
         setContent {
             RemmiTheme {

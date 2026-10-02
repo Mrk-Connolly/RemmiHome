@@ -14,7 +14,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -66,7 +65,7 @@ fun WorkspacesScreen() {
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            items(workspaceDomains) { (title, subtitle) ->
+            items(workspaceDomains, key = { it.first }) { (title, subtitle) ->
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
@@ -90,18 +89,6 @@ fun WorkspacesScreen() {
                             style = MaterialTheme.typography.bodySmall,
                             color = colors.textSecondary
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = colors.accentSoft
-                        ) {
-                            Text(
-                                text = "Coming soon",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = colors.accent,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-                            )
-                        }
                     }
                 }
             }

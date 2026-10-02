@@ -1,0 +1,607 @@
+# Remmi Plugin — Design and Implementation Request
+
+You are implementing a new Remmi workspace/plugin.
+
+I will describe the plugin/product in natural language below.
+
+Your job is to:
+
+1. Understand the product I am describing.
+2. Identify the required functionality.
+3. Translate it into the existing Remmi architecture.
+4. Identify ownership and boundaries.
+5. Design the smallest appropriate implementation.
+6. Identify anything ambiguous or architecturally conflicting.
+7. STOP before implementation so I can review the design.
+
+Do not start coding yet.
+
+---
+
+# 1. Plugin name
+
+**Name:**
+
+`[PLUGIN NAME]`
+
+**Short description:**
+
+`[ONE OR TWO SENTENCES DESCRIBING WHAT THIS PLUGIN IS FOR]`
+
+---
+
+# 2. Product description
+
+Here is my description of how I want this plugin to work:
+
+```text
+[DESCRIBE THE PRODUCT IN YOUR OWN WORDS.
+
+Explain what the user should be able to do.
+
+Do not worry about architecture or technical terminology.
+
+Include examples, workflows, screens, interactions, data, integrations,
+automation, or anything else that is important.]
+```
+
+---
+
+# 3. Primary user workflows
+
+The most important things the user should be able to do are:
+
+### Workflow 1
+
+`[DESCRIBE]`
+
+### Workflow 2
+
+`[DESCRIBE]`
+
+### Workflow 3
+
+`[DESCRIBE]`
+
+### Workflow 4
+
+`[DESCRIBE]`
+
+Add/remove workflows as needed.
+
+---
+
+# 4. Information/data the plugin needs
+
+The plugin needs to work with:
+
+* `[DATA TYPE]`
+* `[DATA TYPE]`
+* `[DATA TYPE]`
+
+For each important type, describe what the user cares about:
+
+`[DESCRIPTION]`
+
+Do not assume a database.
+
+Use local-first storage and the smallest appropriate Android-native
+storage mechanism.
+
+If external data is required, identify the external service and why.
+
+---
+
+# 5. External integrations
+
+Required integrations:
+
+* `[NONE / GOOGLE CALENDAR / GOOGLE DRIVE / GOOGLE CONTACTS / ETC.]`
+
+For each integration, describe what I want it to do:
+
+```text
+[DESCRIPTION]
+```
+
+Do not introduce a Remmi backend/server.
+
+External services should be accessed directly from Android through the
+appropriate existing or future capability boundary.
+
+Do not build a generic synchronization system unless the requirements
+actually demonstrate that one is necessary.
+
+---
+
+# 6. UI / UX description
+
+Describe how I want the plugin to look and behave:
+
+```text
+[DESCRIBE THE UI IN NATURAL LANGUAGE]
+
+Examples:
+
+- screens
+- sections
+- cards
+- lists
+- buttons
+- gestures
+- search
+- filters
+- sorting
+- empty states
+- detail views
+- editing
+- navigation
+- colors
+- emphasis
+- density
+- interactions
+```
+
+Do not redesign the existing Remmi shell or global navigation.
+
+The plugin should feel like a native Remmi workspace and follow the
+existing Remmi UI/design contracts unless I explicitly specify otherwise.
+
+---
+
+# 7. Commands / actions
+
+Actions the user should eventually be able to perform:
+
+* `[ACTION]`
+* `[ACTION]`
+* `[ACTION]`
+
+Examples:
+
+* create
+* edit
+* delete
+* complete
+* launch
+* search
+* schedule
+* share
+* open
+* synchronize
+
+Do not automatically turn every UI interaction into a Remmi command.
+
+Only introduce command concepts where they represent meaningful
+cross-system or externally invokable actions.
+
+---
+
+# 8. Automation
+
+If this plugin needs automation:
+
+```text
+[DESCRIBE AUTOMATION REQUIREMENTS]
+
+Examples:
+
+- scheduled actions
+- reminders
+- recurring actions
+- event-triggered actions
+- background processing
+```
+
+If automation is not required:
+
+`No automation required for this version.`
+
+Use WorkManager only where reliable deferrable/persistent background work
+is actually required.
+
+Do not create speculative automation infrastructure.
+
+---
+
+# 9. Search
+
+Describe anything that should be searchable:
+
+```text
+[SEARCHABLE CONTENT]
+```
+
+If the plugin should integrate with Remmi Global Search, describe what
+should appear as results and what selecting a result should do.
+
+Do not duplicate the global search system.
+
+---
+
+# 10. Google / external data behavior
+
+If external data is involved, describe the desired behavior:
+
+### Local behavior
+
+`[WHAT SHOULD BE AVAILABLE OFFLINE / LOCALLY]`
+
+### Remote behavior
+
+`[WHAT SHOULD COME FROM THE EXTERNAL SERVICE]`
+
+### Synchronization expectations
+
+`[DESCRIBE IF NEEDED]`
+
+Do not invent synchronization semantics that I have not specified.
+
+If the requirements are insufficient to determine correct synchronization
+behavior, STOP and ask me.
+
+---
+
+# 11. Failure behavior
+
+Describe what should happen when things go wrong:
+
+* no internet
+* Google authentication unavailable
+* external service unavailable
+* local data unavailable
+* malformed external data
+* permission denied
+* app/service unavailable
+
+```text
+[DESCRIBE EXPECTED USER EXPERIENCE]
+```
+
+If I have not specified a behavior, identify the ambiguity rather than
+silently inventing important product behavior.
+
+---
+
+# 12. What is explicitly NOT wanted
+
+The plugin must NOT include:
+
+* `[THING]`
+* `[THING]`
+* `[THING]`
+
+Also do not add features simply because they seem useful.
+
+Do not expand the product scope beyond my description.
+
+---
+
+# 13. Architecture requirements
+
+The plugin must fit the existing Remmi architecture:
+
+```text
+Remmi/
+├── core/
+├── ui/
+└── plugins/
+```
+
+The plugin is an independent Remmi workspace/domain.
+
+Plugin-specific:
+
+* business logic
+* models
+* local state
+* persistence
+* repositories, only if genuinely necessary
+* UI
+* external-service integration
+
+should remain owned by the plugin where appropriate.
+
+Core should contain only genuinely shared/fundamental Remmi infrastructure.
+
+Do not move plugin business logic into Core merely for convenience.
+
+Do not create generic shared abstractions prematurely.
+
+---
+
+# 14. Existing Remmi systems to reuse
+
+Before designing anything, inspect the existing project for reusable:
+
+* UI components
+* theme/design system
+* Global Search
+* command/event infrastructure
+* Android capability boundaries
+* local persistence mechanisms
+* WorkManager infrastructure
+* app launching
+* settings
+* permissions
+* authentication
+* testing infrastructure
+
+Reuse existing systems where appropriate.
+
+Do not create duplicates.
+
+---
+
+# 15. Architecture constraints
+
+Do NOT introduce:
+
+* Room
+* SQLite
+* SQL
+* a Remmi backend/server
+* Hilt
+* Dagger
+* Koin
+* another EventBus
+* another state-management framework
+* unnecessary navigation frameworks
+* generic Manager classes
+* generic Helper/Utils classes
+* speculative Repository abstractions
+* speculative synchronization engines
+* unnecessary Gradle modules
+
+Use:
+
+* Kotlin
+* Jetpack Compose
+* Material 3
+* existing Remmi EventBus where appropriate
+* Kotlin Coroutines
+* Flow/StateFlow only where actual observable state requires it
+* WorkManager only when appropriate
+* existing Android capability boundaries
+
+Keep the main thread free of blocking work.
+
+---
+
+# 16. Contract protection
+
+The existing Remmi architecture is contractual.
+
+Do NOT modify:
+
+* `GEMINI.md`
+* architecture contracts
+* `RemmiPlugin`
+* `RemmiCommand`
+* `RemmiEvent`
+* EventBus contracts
+* Android capability contracts
+* UI/design contracts
+* ownership rules
+* testing contracts
+
+If the plugin genuinely requires a contract change:
+
+**STOP.**
+
+Do not implement it.
+
+Report:
+
+1. the contract that conflicts
+2. why the plugin requires a change
+3. the smallest proposed change
+4. the alternatives considered
+
+Wait for my approval.
+
+---
+
+# 17. Plugin isolation
+
+The plugin must fail gracefully.
+
+A plugin failure must not crash:
+
+* Home
+* Apps
+* Global Search
+* other plugins
+* the Remmi shell
+
+Do not allow plugin-specific failures to become application-wide failures
+unless the failure is genuinely in shared Core infrastructure.
+
+---
+
+# 18. Performance
+
+Design for:
+
+* fast plugin entry
+* lazy loading where appropriate
+* no blocking work on the main thread
+* efficient lists
+* efficient state updates
+* minimal unnecessary recomposition
+* reasonable memory usage
+
+Do not add performance infrastructure unless the feature requires it.
+
+The existing Remmi performance strategy remains in force.
+
+---
+
+# 19. Testing
+
+Design a testing strategy covering the actual plugin behavior.
+
+Include:
+
+### Unit tests
+
+`[WHAT SHOULD BE TESTED]`
+
+### UI/Compose tests
+
+`[WHAT SHOULD BE TESTED]`
+
+### Integration tests
+
+`[WHAT SHOULD BE TESTED, IF NEEDED]`
+
+Do not create a large screenshot-testing suite.
+
+Screenshot testing policy:
+
+* maximum **3 screenshots per stage**
+* screenshots only when visual verification provides meaningful value
+* no screenshots for backend/business-logic-only stages
+* normal unit/Compose tests should be preferred where sufficient
+
+---
+
+# 20. Your required response BEFORE coding
+
+Do NOT implement anything yet.
+
+First provide:
+
+## A. Product interpretation
+
+Explain what you believe I am asking for.
+
+## B. Feature scope
+
+List the concrete features required for the first implementation.
+
+Separate:
+
+* required now
+* explicitly deferred
+* ambiguous
+
+## C. User workflows
+
+Turn my description into concrete user flows.
+
+## D. Plugin architecture
+
+Propose the plugin's internal structure and ownership.
+
+Show the proposed directory/file structure.
+
+Keep it minimal.
+
+## E. Data model
+
+Identify the minimum data structures required.
+
+Do not design database schemas.
+
+## F. Persistence
+
+Identify what needs to be persisted locally and which Android-native
+mechanism is appropriate.
+
+## G. External integrations
+
+Identify required Android/Google/external capabilities and their
+boundaries.
+
+## H. UI structure
+
+Describe the proposed screens and major UI components.
+
+Do not redesign the Remmi shell.
+
+## I. Commands/events
+
+Identify which actions genuinely require commands/events and which should
+remain direct local calls.
+
+## J. Failure isolation
+
+Explain how plugin failures are contained.
+
+## K. Testing strategy
+
+Describe the tests required.
+
+## L. Open questions
+
+List anything where my description is insufficient to safely implement
+the product.
+
+Do not invent answers to important product questions.
+
+---
+
+# 21. STOP
+
+After producing the design above:
+
+**STOP.**
+
+Do not create files.
+
+Do not modify code.
+
+Do not modify architecture documents.
+
+Do not add dependencies.
+
+Do not implement the plugin.
+
+Wait for my approval or requested changes.
+
+Only after I explicitly approve the design should implementation begin.
+
+---
+
+# Implementation phase
+
+When I subsequently approve the design, implement only the approved scope.
+
+Before implementation:
+
+1. Re-read the approved design.
+2. Inspect the current project again.
+3. Verify ownership.
+4. Reuse existing systems.
+5. Identify the smallest implementation.
+
+Then implement incrementally.
+
+After implementation:
+
+1. Build.
+2. Run relevant tests.
+3. Run relevant Compose/Android tests.
+4. Perform manual verification.
+5. Use no more than 3 screenshots if visual verification is useful.
+6. Check architecture boundaries.
+7. Check performance implications.
+8. Check plugin failure isolation.
+
+Report:
+
+* files added
+* files modified
+* files removed
+* architecture decisions
+* tests added/changed
+* exact commands executed
+* actual results
+* manual verification
+* screenshot count, if any
+* remaining issues
+
+Never claim a build or test passed unless it was actually executed.
+
+Then STOP.

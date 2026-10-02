@@ -5,6 +5,7 @@ import com.remmi.core.eventBus.commands.LaunchAppCommand
 import com.remmi.core.eventBus.commands.RemmiCommand
 import com.remmi.ui.search.GlobalSearchResult
 import com.remmi.ui.search.MatchType
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -47,7 +48,7 @@ class CommandArchitectureTest {
         val command = LaunchAppCommand(sampleApp)
 
         var observedCommand: LaunchAppCommand? = null
-        val job = launch {
+        val job = launch(Dispatchers.Unconfined) {
             observedCommand = eventBus.commandsOfType<LaunchAppCommand>().first()
         }
 

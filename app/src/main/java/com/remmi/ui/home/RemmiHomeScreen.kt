@@ -64,7 +64,7 @@ import kotlinx.coroutines.launch
 fun RemmiHomeScreen(
     host: RemmiHost,
     snackbarHostState: SnackbarHostState,
-    preferences: RemmiPreferences? = null
+    preferences: RemmiPreferences? = null,
 ) {
     val colors = MaterialTheme.remmiColors
     val launcherCapability = host.launcherCapability
@@ -86,7 +86,7 @@ fun RemmiHomeScreen(
 
     val favoriteApps = remember(installedApps, savedFavorites) {
         if (savedFavorites.isNotEmpty()) {
-            savedFavorites.mapNotNull { pkg -> installedApps.find { it.packageName == pkg } }.take(6)
+            savedFavorites.asSequence().mapNotNull { pkg -> installedApps.find { it.packageName == pkg } }.take(6).toList()
         } else {
             installedApps.take(6)
         }
@@ -183,19 +183,23 @@ fun RemmiHomeScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     globalSearchResults.forEach { result ->
-                        GlobalSearchResultItem(
-                            result = result,
-                            onResultClick = {
-                                focusManager.clearFocus()
-                                val launchCommand = result.toCommand()
-                                val success = launcherCapability?.launchApp(launchCommand.appInfo) ?: false
-                                if (!success) {
-                                    coroutineScope.launch {
-                                        snackbarHostState.showSnackbar("Unable to launch ${launchCommand.appInfo.label}")
+                        androidx.compose.runtime.key(result.appInfo.packageName) {
+                            GlobalSearchResultItem(
+                                result = result,
+                                onResultClick = {
+                                    focusManager.clearFocus()
+                                    val launchCommand = result.toCommand()
+                                    val success = launcherCapability?.launchApp(launchCommand.appInfo) ?: false
+                                    if (success) {
+                                        searchQuery = ""
+                                    } else {
+                                        coroutineScope.launch {
+                                            snackbarHostState.showSnackbar("Unable to launch ${launchCommand.appInfo.label}")
+                                        }
                                     }
                                 }
-                            }
-                        )
+                            )
+                        }
                     }
                 }
             }

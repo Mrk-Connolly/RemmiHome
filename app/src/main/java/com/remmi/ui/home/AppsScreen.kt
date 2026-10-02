@@ -67,7 +67,7 @@ import kotlinx.coroutines.launch
 fun AppsScreen(
     host: RemmiHost,
     snackbarHostState: SnackbarHostState,
-    preferences: RemmiPreferences? = null
+    preferences: RemmiPreferences? = null,
 ) {
     val colors = MaterialTheme.remmiColors
     val context = LocalContext.current
@@ -76,7 +76,7 @@ fun AppsScreen(
     val installedApps by (launcherCapability?.installedApps?.collectAsState()
         ?: remember { mutableStateOf(emptyList()) })
     val isDiscovering by (launcherCapability?.isDiscovering?.collectAsState()
-        ?: remember { mutableStateOf(false) })
+        ?: remember { mutableStateOf(value = false) })
 
     val favoritePackages by (preferences?.favoritePackages?.collectAsState()
         ?: remember { mutableStateOf(emptyList()) })
@@ -122,7 +122,7 @@ fun AppsScreen(
 
     val handleAppClick: (RemmiAppInfo) -> Unit = { appInfo ->
         focusManager.clearFocus()
-        recentAppPackages = (listOf(appInfo.packageName) + recentAppPackages).distinct().take(10)
+        recentAppPackages = (listOf(appInfo.packageName) + recentAppPackages).asSequence().distinct().take(10).toList()
         val success = launcherCapability?.launchApp(appInfo) ?: false
         if (!success) {
             coroutineScope.launch {
@@ -284,7 +284,7 @@ fun AppsScreen(
                 else -> {
                     Column(modifier = Modifier.fillMaxSize()) {
                         // "Recently Used" horizontal section when viewing ALL without active search query
-                        if (selectedCategory == AppCategory.ALL && searchQuery.isBlank() && recentApps.isNotEmpty()) {
+                        if ((selectedCategory == AppCategory.ALL) && (searchQuery.isBlank()) && (recentApps.isNotEmpty())) {
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -419,8 +419,7 @@ private fun AppLauncherCard(
                 onClick = onToggleFavorite,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .size(32.dp)
-                    .padding(4.dp)
+                    .size(48.dp)
                     .semantics {
                         contentDescription = if (isFavorite) "Remove ${appInfo.label} from Favorites" else "Add ${appInfo.label} to Favorites"
                     }

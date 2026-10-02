@@ -187,17 +187,7 @@ fun SettingsScreen(
 
                             Box(
                                 modifier = Modifier
-                                    .size(40.dp)
-                                    .background(swatchColor, CircleShape)
-                                    .then(
-                                        if (isSelected) {
-                                            Modifier.border(
-                                                width = 2.dp,
-                                                color = colors.textPrimary,
-                                                shape = CircleShape
-                                            )
-                                        } else Modifier
-                                    )
+                                    .size(48.dp)
                                     .clickable(
                                         role = Role.Button,
                                         onClick = { effectivePrefs.setAccent(accent) }
@@ -208,13 +198,29 @@ fun SettingsScreen(
                                     },
                                 contentAlignment = Alignment.Center
                             ) {
-                                if (isSelected) {
-                                    Icon(
-                                        imageVector = Icons.Default.Check,
-                                        contentDescription = "Selected",
-                                        tint = Color.White,
-                                        modifier = Modifier.size(20.dp)
-                                    )
+                                Box(
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .background(swatchColor, CircleShape)
+                                        .then(
+                                            if (isSelected) {
+                                                Modifier.border(
+                                                    width = 2.dp,
+                                                    color = colors.textPrimary,
+                                                    shape = CircleShape
+                                                )
+                                            } else Modifier
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    if (isSelected) {
+                                        Icon(
+                                            imageVector = Icons.Default.Check,
+                                            contentDescription = "Selected",
+                                            tint = Color.White,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
                                 }
                             }
                         }
