@@ -1,5 +1,6 @@
 package com.remmi.core.android.launcher
 
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -81,5 +82,17 @@ class AndroidLauncherCapabilityTest {
         // Simulating package change broadcast triggering refresh
         capability.refreshInstalledApps()
         assertEquals(initialCount, capability.installedApps.value.size)
+    }
+
+    @Test
+    fun fakeCapability_concurrentRefreshIsSafe() = runBlocking {
+        val capability = FakeLauncherCapability()
+        val job1 = async { capability.refreshInstalledApps() }
+        val job2 = async { capability.refreshInstalledApps() }
+
+        job1.await()
+        job2.await()
+
+        assertEquals(2, capability.installedApps.value.size)
     }
 }

@@ -1,5 +1,8 @@
 package com.remmi.ui.home
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -247,5 +250,27 @@ class HomeScreenTest {
         assertEquals("com.example.camera", launcher.launchedApp?.packageName)
         composeTestRule.onNodeWithText("FAVORITE APPS").assertIsDisplayed()
         composeTestRule.onNodeWithText("SEARCH RESULTS").assertDoesNotExist()
+    }
+
+    @Test
+    fun homeScreen_homeRequestedTrigger_returnsToHomeAndClosesSettings() {
+        val launcher = TestLauncherCapability()
+        val host = RemmiHost(launcherCapability = launcher)
+
+        var trigger by mutableStateOf(0)
+
+        composeTestRule.setContent {
+            RemmiTheme {
+                HomeScreen(host = host, homeRequestedTrigger = trigger)
+            }
+        }
+
+        composeTestRule.onNodeWithContentDescription("Settings").performClick()
+        composeTestRule.onNodeWithText("Settings").assertIsDisplayed()
+
+        trigger += 1
+
+        composeTestRule.onNodeWithText("FAVORITE APPS").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Appearance").assertDoesNotExist()
     }
 }

@@ -12,7 +12,10 @@ import com.remmi.ui.theme.RemmiPreferences
 import com.remmi.ui.theme.RemmiTheme
 
 @Composable
-fun RemmiApp(host: RemmiHost? = null) {
+fun RemmiApp(
+    host: RemmiHost? = null,
+    homeRequestedTrigger: Int = 0
+) {
     val context = LocalContext.current
     val effectiveHost = host ?: (context.applicationContext as? RemmiApplication)?.host ?: RemmiHost()
 
@@ -26,7 +29,8 @@ fun RemmiApp(host: RemmiHost? = null) {
     ) {
         HomeScreen(
             host = effectiveHost,
-            preferences = preferences
+            preferences = preferences,
+            homeRequestedTrigger = homeRequestedTrigger
         )
     }
 }

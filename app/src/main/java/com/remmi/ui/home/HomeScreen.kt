@@ -22,6 +22,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -41,10 +42,17 @@ import com.remmi.ui.theme.remmiColors
 @Composable
 fun HomeScreen(
     host: RemmiHost,
-    preferences: RemmiPreferences? = null
+    preferences: RemmiPreferences? = null,
+    homeRequestedTrigger: Int = 0
 ) {
     var isSettingsOpen by rememberSaveable { mutableStateOf(false) }
     val colors = MaterialTheme.remmiColors
+
+    LaunchedEffect(homeRequestedTrigger) {
+        if (homeRequestedTrigger > 0) {
+            isSettingsOpen = false
+        }
+    }
 
     if (isSettingsOpen) {
         SettingsScreen(
@@ -57,6 +65,12 @@ fun HomeScreen(
             pageCount = { HomeDestination.entries.size }
         )
         val snackbarHostState = remember { SnackbarHostState() }
+
+        LaunchedEffect(homeRequestedTrigger) {
+            if (homeRequestedTrigger > 0) {
+                pagerState.scrollToPage(1)
+            }
+        }
 
         Scaffold(
             modifier = Modifier.fillMaxSize(),

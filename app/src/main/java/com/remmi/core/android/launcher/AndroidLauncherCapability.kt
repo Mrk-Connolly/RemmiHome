@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
 
 /**
@@ -24,6 +25,8 @@ class AndroidLauncherCapability(
     private val context: Context,
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
 ) : RemmiLauncherCapability {
+
+    private val refreshMutex = Mutex()
 
     private val _installedApps = MutableStateFlow<List<RemmiAppInfo>>(emptyList())
     override val installedApps: StateFlow<List<RemmiAppInfo>> = _installedApps.asStateFlow()
@@ -64,6 +67,9 @@ class AndroidLauncherCapability(
     }
 
     override suspend fun refreshInstalledApps() {
+        if (!refreshMutex.tryLock()) {
+            return
+        }
         _isDiscovering.value = true
         try {
             val apps = withContext(Dispatchers.IO) {
@@ -97,6 +103,7 @@ class AndroidLauncherCapability(
             _installedApps.value = apps
         } finally {
             _isDiscovering.value = false
+            refreshMutex.unlock()
         }
     }
 
