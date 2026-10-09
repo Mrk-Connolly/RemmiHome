@@ -21,3 +21,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "Remmi"
 include(":app")
+include(":core")
+include(":plugins")

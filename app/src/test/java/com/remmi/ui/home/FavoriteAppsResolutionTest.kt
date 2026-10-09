@@ -22,7 +22,7 @@ class FavoriteAppsResolutionTest {
 
         val resolvedFavorites = savedFavorites.mapNotNull { pkg ->
             sampleInstalledApps.find { it.packageName == pkg }
-        }.take(6)
+        }.take(20)
 
         assertEquals(3, resolvedFavorites.size)
         assertEquals("Camera", resolvedFavorites[0].label)
@@ -36,38 +36,18 @@ class FavoriteAppsResolutionTest {
 
         val resolvedFavorites = savedFavorites.mapNotNull { pkg ->
             sampleInstalledApps.find { it.packageName == pkg }
-        }.take(6)
+        }.take(20)
 
         assertEquals(2, resolvedFavorites.size)
         assertEquals("Camera", resolvedFavorites[0].label)
         assertEquals("Clock", resolvedFavorites[1].label)
     }
 
-    @Test
-    fun favoriteAppsResolution_capsAtSixItems() {
-        val savedFavorites = listOf(
-            "com.example.browser",
-            "com.example.camera",
-            "com.example.calculator",
-            "com.example.notes",
-            "com.example.photos",
-            "com.example.clock",
-            "com.example.maps"
-        )
-
-        val resolvedFavorites = savedFavorites.mapNotNull { pkg ->
-            sampleInstalledApps.find { it.packageName == pkg }
-        }.take(6)
-
-        assertEquals(6, resolvedFavorites.size)
-        assertEquals("Clock", resolvedFavorites.last().label)
-    }
-
     private fun resolveFavorites(savedFavorites: List<String>): List<RemmiAppInfo> {
         return if (savedFavorites.isNotEmpty()) {
-            savedFavorites.mapNotNull { pkg -> sampleInstalledApps.find { it.packageName == pkg } }.take(6)
+            savedFavorites.mapNotNull { pkg -> sampleInstalledApps.find { it.packageName == pkg } }.take(20)
         } else {
-            sampleInstalledApps.take(6)
+            sampleInstalledApps.take(20)
         }
     }
 
@@ -75,7 +55,31 @@ class FavoriteAppsResolutionTest {
     fun favoriteAppsResolution_fallbackToFirstAppsIfNoFavorites() {
         val resolvedFavorites = resolveFavorites(emptyList())
 
-        assertEquals(6, resolvedFavorites.size)
+        assertEquals(7, resolvedFavorites.size)
         assertEquals("Browser", resolvedFavorites.first().label)
+    }
+
+    @Test
+    fun favoriteGridSlotsResolution_uninstalledAppLeavesSlotEmptyWithoutShifting() {
+        val savedSlots = listOf(
+            "com.example.camera",
+            "com.example.uninstalled", // uninstalled!
+            "com.example.clock",
+            null,
+            "com.example.browser",
+            null
+        )
+
+        val resolvedSlots: List<RemmiAppInfo?> = savedSlots.map { pkg ->
+            pkg?.let { p -> sampleInstalledApps.find { it.packageName == p } }
+        }
+
+        assertEquals(6, resolvedSlots.size)
+        assertEquals("Camera", resolvedSlots[0]?.label)
+        assertEquals(null, resolvedSlots[1]) // Slot 1 remains empty!
+        assertEquals("Clock", resolvedSlots[2]?.label) // Clock remains in Slot 2!
+        assertEquals(null, resolvedSlots[3])
+        assertEquals("Browser", resolvedSlots[4]?.label)
+        assertEquals(null, resolvedSlots[5])
     }
 }

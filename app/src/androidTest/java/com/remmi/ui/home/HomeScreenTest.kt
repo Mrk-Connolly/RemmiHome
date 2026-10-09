@@ -64,7 +64,7 @@ class HomeScreenTest {
             }
         }
 
-        composeTestRule.onNodeWithText("FAVORITE APPS").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("Search applications").assertIsDisplayed()
         composeTestRule.onNodeWithText("Browser").assertIsDisplayed()
         composeTestRule.onNodeWithText("Camera").assertIsDisplayed()
         composeTestRule.onNodeWithContentDescription("Page 2 of 3").assertIsDisplayed()
@@ -81,7 +81,7 @@ class HomeScreenTest {
             }
         }
 
-        composeTestRule.onNodeWithText("FAVORITE APPS").performTouchInput { swipeRight() }
+        composeTestRule.onNodeWithText("Browser").performTouchInput { swipeRight() }
 
         composeTestRule.onNodeWithText("Workspaces").assertIsDisplayed()
         composeTestRule.onNodeWithText("Planning").assertIsDisplayed()
@@ -99,49 +99,11 @@ class HomeScreenTest {
             }
         }
 
-        composeTestRule.onNodeWithText("FAVORITE APPS").performTouchInput { swipeLeft() }
+        composeTestRule.onNodeWithText("Browser").performTouchInput { swipeLeft() }
 
-        composeTestRule.onNodeWithText("Apps").assertIsDisplayed()
-        composeTestRule.onNodeWithText("3 apps").assertIsDisplayed()
         composeTestRule.onNodeWithText("Browser").assertIsDisplayed()
         composeTestRule.onNodeWithText("Camera").assertIsDisplayed()
         composeTestRule.onNodeWithText("Calculator").assertIsDisplayed()
-    }
-
-    @Test
-    fun homeScreen_appsSearchFiltering_showsMatchingAppsOnly() {
-        val launcher = TestLauncherCapability()
-        val host = RemmiHost(launcherCapability = launcher)
-
-        composeTestRule.setContent {
-            RemmiTheme {
-                HomeScreen(host = host)
-            }
-        }
-
-        composeTestRule.onNodeWithText("FAVORITE APPS").performTouchInput { swipeLeft() }
-        composeTestRule.onNodeWithContentDescription("Search applications").performTextInput("cam")
-
-        composeTestRule.onNodeWithText("Camera").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Browser").assertDoesNotExist()
-        composeTestRule.onNodeWithText("Calculator").assertDoesNotExist()
-    }
-
-    @Test
-    fun homeScreen_selectingAppInAppsDestination_triggersLaunch() {
-        val launcher = TestLauncherCapability()
-        val host = RemmiHost(launcherCapability = launcher)
-
-        composeTestRule.setContent {
-            RemmiTheme {
-                HomeScreen(host = host)
-            }
-        }
-
-        composeTestRule.onNodeWithText("FAVORITE APPS").performTouchInput { swipeLeft() }
-        composeTestRule.onNodeWithContentDescription("Launch Camera").performClick()
-
-        assertEquals("com.example.camera", launcher.launchedApp?.packageName)
     }
 
     @Test
@@ -155,11 +117,10 @@ class HomeScreenTest {
             }
         }
 
-        composeTestRule.onNodeWithText("FAVORITE APPS").performTouchInput { swipeLeft() }
-        composeTestRule.onNodeWithContentDescription("Filter by Media").performClick()
+        composeTestRule.onNodeWithText("Browser").performTouchInput { swipeLeft() }
+        composeTestRule.onNodeWithContentDescription("Filter by Tools").performClick()
 
-        composeTestRule.onNodeWithText("Camera").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Browser").assertDoesNotExist()
+        composeTestRule.onNodeWithText("Calculator").assertIsDisplayed()
     }
 
     @Test
@@ -179,7 +140,7 @@ class HomeScreenTest {
     }
 
     @Test
-    fun homeScreen_clickingSettings_navigatesToSettingsScreen() {
+    fun homeScreen_clickingSettingsOnAppsPage_navigatesToSettingsScreen() {
         val launcher = TestLauncherCapability()
         val host = RemmiHost(launcherCapability = launcher)
 
@@ -189,6 +150,7 @@ class HomeScreenTest {
             }
         }
 
+        composeTestRule.onNodeWithText("Browser").performTouchInput { swipeLeft() }
         composeTestRule.onNodeWithContentDescription("Settings").performClick()
 
         composeTestRule.onNodeWithText("Settings").assertIsDisplayed()
@@ -206,10 +168,11 @@ class HomeScreenTest {
             }
         }
 
+        composeTestRule.onNodeWithText("Browser").performTouchInput { swipeLeft() }
         composeTestRule.onNodeWithContentDescription("Settings").performClick()
         composeTestRule.onNodeWithContentDescription("Back").performClick()
 
-        composeTestRule.onNodeWithText("FAVORITE APPS").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("Search applications").assertIsDisplayed()
     }
 
     @Test
@@ -248,7 +211,7 @@ class HomeScreenTest {
         composeTestRule.onNodeWithContentDescription("Launch Camera").performClick()
 
         assertEquals("com.example.camera", launcher.launchedApp?.packageName)
-        composeTestRule.onNodeWithText("FAVORITE APPS").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("Search applications").assertIsDisplayed()
         composeTestRule.onNodeWithText("SEARCH RESULTS").assertDoesNotExist()
     }
 
@@ -265,12 +228,31 @@ class HomeScreenTest {
             }
         }
 
+        composeTestRule.onNodeWithText("Browser").performTouchInput { swipeLeft() }
         composeTestRule.onNodeWithContentDescription("Settings").performClick()
         composeTestRule.onNodeWithText("Settings").assertIsDisplayed()
 
         trigger += 1
 
-        composeTestRule.onNodeWithText("FAVORITE APPS").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("Search applications").assertIsDisplayed()
         composeTestRule.onNodeWithText("Appearance").assertDoesNotExist()
+    }
+
+    @Test
+    fun homeScreen_clickingAiVoiceButton_opensAiVoiceModal() {
+        val launcher = TestLauncherCapability()
+        val host = RemmiHost(launcherCapability = launcher)
+
+        composeTestRule.setContent {
+            RemmiTheme {
+                HomeScreen(host = host)
+            }
+        }
+
+        composeTestRule.onNodeWithContentDescription("AI Voice Assistant").performClick()
+
+        composeTestRule.onNodeWithText("AI Voice Assistant").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Close").performClick()
+        composeTestRule.onNodeWithText("AI Voice Assistant").assertDoesNotExist()
     }
 }

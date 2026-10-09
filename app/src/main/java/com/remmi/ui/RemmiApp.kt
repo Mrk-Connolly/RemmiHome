@@ -17,7 +17,7 @@ fun RemmiApp(
     homeRequestedTrigger: Int = 0
 ) {
     val context = LocalContext.current
-    val effectiveHost = host ?: (context.applicationContext as? RemmiApplication)?.host ?: RemmiHost()
+    val effectiveHost = host ?: (context.applicationContext as? RemmiApplication)?.host ?: RemmiHost(aiCapability = com.remmi.core.ai.DefaultAiCapability())
 
     val preferences = remember(context) { RemmiPreferences.getInstance(context) }
     val currentTheme by preferences.theme.collectAsState()

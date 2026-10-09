@@ -373,7 +373,7 @@ private fun RecentAppCard(
                 Box(contentAlignment = Alignment.Center) {
                     if (appInfo.icon != null) {
                         Image(
-                            bitmap = appInfo.icon,
+                            bitmap = appInfo.icon!!,
                             contentDescription = appInfo.label,
                             modifier = Modifier.fillMaxSize()
                         )
@@ -455,7 +455,7 @@ private fun AppLauncherCard(
                     Box(contentAlignment = Alignment.Center) {
                         if (appInfo.icon != null) {
                             Image(
-                                bitmap = appInfo.icon,
+                                bitmap = appInfo.icon!!,
                                 contentDescription = appInfo.label,
                                 modifier = Modifier.fillMaxSize()
                             )

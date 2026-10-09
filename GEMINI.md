@@ -1,5 +1,25 @@
 # Remmi Engineering Context & Rules
 
+### Gradle Module Strategy
+
+Use a hybrid architecture: distinct Gradle modules for meaningful architectural boundaries, supplemented by automated architecture tests and static analysis.
+
+Do not keep the entire application in a single Gradle module solely for convenience. Equally, do not create a Gradle module for every package, class, interface, or feature sublayer.
+
+During the initial audit, evaluate the existing dependency graph, build configuration time, incremental compilation, feature ownership, public APIs, and dependency violations.
+
+Recommend a minimal target module graph that enforces the most important boundaries. For each proposed module, document its responsibility, allowed dependencies, public API, enforcement strategy, and expected benefit.
+
+Introduce modules incrementally, beginning with boundaries that prevent high-impact dependency violations. Keep `:app` as the composition root rather than a home for feature business logic.
+
+Use Gradle dependency constraints to enforce module-level boundaries. Use automated architecture tests and static analysis for rules that module boundaries cannot enforce conveniently.
+
+Do not perform a large-scale module migration without evidence that the proposed structure improves dependency enforcement, maintainability, test isolation, or build performance.
+
+Before approving the module graph, compare the proposed approach with a single-module baseline where practical. Measure build performance separately from runtime performance.
+
+Once the module graph is approved, treat it as an architectural contract. Never bypass or change its dependency rules without following the approved contract-amendment procedure.
+
 These foundational principles apply to every task in Remmi:
 
 * **Inspect existing code before changing it.** Never assume structure or behavior.
@@ -26,10 +46,23 @@ These rules are permanent and take precedence over convenience or speculative re
 The AI coder must **NEVER modify an existing Remmi contract** unless the user explicitly authorizes that specific contract change.
 Contracts include `GEMINI.md`, architectural rules, public interfaces, Core/plugin contracts, EventBus contracts, Android capability contracts, testing contracts, UI design contracts, and API boundaries.
 
+> **CRITICAL: Canonical Contracts**
+> All detailed engineering constraints are formally tracked in `docs/contracts/`.
+> Before implementing any major change, refer to:
+> - `docs/contracts/CONTRACT_INDEX.md`
+> - `docs/MODULE_MAP.md`
+> - `AI_IMPLEMENTATION_STATE.md`
+
 If an implementation task appears to require changing an existing contract:
 **STOP.** Report `CONTRACT CONFLICT` detailing the contract, reason, and required decision, and wait for explicit authorization.
 
-## RULE 2 — SELF-CONTAINED DIRECTORY OWNERSHIP
+## RULE 2 — MODULE BOUNDARIES & DEPENDENCY DIRECTION
+Remmi uses a strict multi-module Gradle architecture:
+* **`:app`**: The composition root. Instantiates and registers all plugins. Depends on `:core` and `:plugins`.
+* **`:plugins`**: Feature boundaries (Food, Health, Knowledge, Planning). Depends ONLY on `:core`. Features MUST NOT depend on other features.
+* **`:core`**: Infrastructure (EventBus, interfaces, Android capabilities). Depends ONLY on standard libraries, NEVER on `:app` or `:plugins`.
+
+## RULE 3 — SELF-CONTAINED DIRECTORY OWNERSHIP
 Every system/class/concept should be organized so that its implementation resources live inside the directory that owns that concept. The filesystem should make ownership obvious.
 * Do NOT create generic dumping-ground directories (`models/`, `utils/`, `helpers/`, `common/`, `shared/`, `misc/`).
 * Do NOT use `core/models/` as a general-purpose storage location.
@@ -72,11 +105,23 @@ Remmi application code must be **Kotlin-first**.
 * Remmi has **one EventBus** for decoupled communication between independent systems (`Command` = intent, `Event` = notification).
 * Do NOT use EventBus for ordinary local function calls, parent/child UI communication, or simple object coordination.
 
-## 8. Persistence: Local-First Storage (No Database)
+## 8. Persistence: Local-First Unified Storage (`data/` Directory - No Database)
 * Remmi will **NOT use a database** (no Room, SQLite, DAOs, DB entities, DB repositories, or generic CRUD frameworks).
-* Use appropriate Android-native local storage mechanisms for actual requirements (DataStore for application preferences/settings, app-private files for documents, cache storage for temporary info).
+* **Unified `data/` Directory Storage**: All local domain JSON files live in a single dedicated subfolder `app-private/files/data/` (`calendar.json`, `uncompleted_tasks.json`, `completed_tasks.json`, `ingredients.json`, `recipes.json`, `meals.json`, `shopping_items.json`, `suppliers.json`, `brands.json`, `purchases.json`, etc.).
+* **Automatic File Migration**: Legacy JSON storage files are automatically migrated to `data/` on startup via `DataDirectoryMigrator`.
 * **No Remmi Backend**: Remmi does not have its own server or cloud database.
 * **Direct Google Services**: Integrates directly with Google Services where needed (Google Calendar, Tasks, Contacts). Google remains the remote source of truth; Remmi maintains minimal local state/cache as needed.
+
+## 8a. AI Security Boundary: Read-Only Access & Core Write Confirmation
+* **Dual Gemini Connection Modes**:
+  1. **Listener & Transcriber Mode**: Continuous audio streaming over WebSocket (`BidiGenerateContent`) for real-time speech-to-text transcriptions (`GeminiLiveTranscriptionProvider`).
+  2. **Interactive AI Chatbox & Log Reader Mode**: Multi-turn conversation thread (`GeminiChatboxEngine`) with log attachment chips (`GeminiLogReader` capturing recording diagnostics, system context facts, and AI action logs).
+* **Gemini Read-Only Access**: Gemini has **READ-ONLY** access to JSON data files in `data/` for answering queries and analyzing logs.
+* **Strict Direct Write Restriction**: Gemini is **STRICTLY PROHIBITED** from writing directly to JSON data files or invoking repository save methods.
+* **Draft Template & Popup Confirmation Workflow**:
+  - Any write/add request ("Add task...", "Create event...", "Add ingredient...") causes Gemini to construct a proposed draft template (`PendingDraftAction`).
+  - The UI presents a **User Save Confirmation Popup** (`PendingActionConfirmDialog`) displaying the editable draft.
+  - File writes and repository persistence are executed **strictly by Core Application logic** only upon explicit user confirmation in the popup UI.
 
 ## 9. Background Work: WorkManager
 * Use **WorkManager** for deferrable, reliable/persistent scheduled background execution.

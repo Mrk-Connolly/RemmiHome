@@ -267,8 +267,343 @@ Remmi requires a clean, explicit boundary between Search (discovering items: "Wh
 ### Consequences
 - Clean, explicit separation between Search discovery and Command intent execution, ready for future workspace and action expansions without architectural clutter.
 
+---
 
+## ADR 016: Performance Profiling Baseline & Bottleneck Identification
 
+* **Date:** 2026-10-02
+* **Status:** Accepted
 
+### Context
+Remmi requires a clean performance baseline across startup, Home rendering, app discovery, Global Search ranking, category resolution, and app launching before conducting optimization work.
 
+### Decisions
+1. **Automated Microbenchmark Suite (`HomePerformanceTest`):** Expanded unit performance test suite measuring host initialization (< 2ms), app discovery & sorting for 1000 apps (< 5ms), search filtering for 500 apps (< 1.5ms), Global Search match ranking for 1000 apps (< 3ms), and favorite resolution (< 1ms).
+2. **Main-Thread Bottleneck Identification:** Identified synchronous `PackageManager.getApplicationInfo` calls inside `resolveAppCategory` on non-null `Context` during Apps screen category chip selection as a primary main-thread stall bottleneck.
+3. **Performance Baseline Documentation (`docs/PERFORMANCE.md`):** Recorded official baseline measurements, bottleneck findings, and recommended optimization stages.
+
+### Consequences
+- Reliable, repeatable, scientific performance baseline established across all launcher workflows.
+
+---
+
+## ADR 017: Typed Remmi Command Model & Controller Routing
+
+* **Date:** 2026-10-02
+* **Status:** Accepted
+
+### Context
+Remmi requires an explicit command execution model with typed results (`RemmiCommandResult`), system routing inside `RemmiController`, and EventBus command emission without introducing over-engineered command frameworks or breaking established contracts.
+
+### Decisions
+1. **Typed Command Results (`RemmiCommandResult.kt`):** Defined `sealed interface RemmiCommandResult` with `Success(val message: String?)` and `Failure(val reason: String, val cause: Throwable?)`.
+2. **Navigation Intent Command (`NavigateCommand.kt`):** Defined `data class NavigateCommand(val destinationId: String) : RemmiCommand` in `com.remmi.core.eventBus.commands`, decoupling Core from UI destination types.
+3. **Controller Command Routing (`RemmiController.kt`):** Implemented `executeCommand(command: RemmiCommand): RemmiCommandResult` in `RemmiController`. Executes system actions (`LaunchAppCommand` -> `launcherCapability`, `NavigateCommand`), emits executed commands onto `RemmiEventBus` for observers, and handles unhandled commands gracefully with `RemmiCommandResult.Failure` without throwing exceptions.
+4. **Verification:** `CommandRoutingTest` verifies success/failure execution paths, EventBus command emission, missing capability handling, and unhandled command fallbacks.
+
+### Consequences
+- Clean, predictable command routing foundation prepared for future AI command resolution and cross-workspace action execution.
+
+---
+
+## ADR 018: Command Architecture UI Integration
+
+* **Date:** 2026-10-02
+* **Status:** Accepted
+
+### Context
+Remmi requires seamless integration of the Command architecture into user-facing launcher workflows (app launching from Search, Favorites, Apps grid, Recent apps, and top-level navigation) using `RemmiController.executeCommand` without modifying contracts or over-engineering local UI operations.
+
+### Decisions
+1. **Controller Flowing into UI (`RemmiApp.kt`, `HomeScreen.kt`):** `RemmiApp` accepts `controller: RemmiController?` (resolving to `RemmiApplication.controller` or constructing `RemmiController(effectiveHost)`), passing `effectiveController` to `HomeScreen`, `RemmiHomeScreen`, and `AppsScreen`.
+2. **Unified App Launch Execution:** Replaced direct `launchApp` capability invocations in `RemmiHomeScreen` (Global Search & Favorites) and `AppsScreen` (Recent apps & main App grid) with `controller.executeCommand(LaunchAppCommand(appInfo))`.
+3. **Decoupled Navigation Command Handling:** `HomeScreen` observes `NavigateCommand` from `RemmiEventBus` in `LaunchedEffect(host)` and smoothly animates the pager (`animateScrollToPage`) to the requested top-level destination (`WORKSPACES`, `HOME`, `APPS`).
+4. **Verification:** `CommandIntegrationTest` verifies that `executeCommand` launches apps, dispatches navigation intent, and emits commands onto `RemmiEventBus` for observers.
+
+### Consequences
+- Launcher workflows operate via typed commands, enabling clean command logging, observability, and readiness for AI command execution.
+
+---
+
+## ADR 019: AI Capability Boundary & Command Isolation
+
+* **Date:** 2026-10-02
+* **Status:** Accepted
+
+### Context
+Remmi requires a clean capability boundary for AI integrations (`RemmiAiCapability`) that strictly restricts AI interactions to natural language intent resolution (`resolveIntent`) and typed command execution (`processInput`), preventing AI from directly mutating or accessing internal application or UI state.
+
+### Decisions
+1. **AI Boundary Contract (`RemmiAiCapability.kt`):** Defined interface `RemmiAiCapability` in `com.remmi.core.ai` exposing `resolveIntent(input: String): RemmiCommand?` and `processInput(input, executeRouter): RemmiCommandResult`.
+2. **Default Intent Resolution (`DefaultAiCapability.kt`):** Implemented `DefaultAiCapability` resolving natural language requests ("go to workspaces", "open apps", "launch camera") into typed `NavigateCommand` or `LaunchAppCommand` instances. Unrecognized intents return `RemmiCommandResult.Failure`.
+3. **Host Container Integration (`RemmiHost.kt`):** Added `val aiCapability: RemmiAiCapability = DefaultAiCapability()` to `RemmiHost`.
+4. **Verification:** `AiCapabilityBoundaryTest` verifies natural language intent resolution, router execution, failure handling for unsupported inputs, and host integration.
+
+### Consequences
+- AI capabilities are cleanly isolated behind typed command resolution, guaranteeing that AI cannot bypass architectural boundaries or corrupt application state.
+
+---
+
+## ADR 020: AI Natural Language Command Resolution & Hallucination Prevention
+
+* **Date:** 2026-10-02
+* **Status:** Accepted
+
+### Context
+Remmi requires natural language command resolution (`DefaultAiCapability`) capable of mapping diverse phrasing variations ("switch to workspaces", "open settings", "run firefox") into typed Remmi commands (`NavigateCommand`, `LaunchAppCommand`) while strictly rejecting unmapped or unsupported operations to prevent AI hallucination or unhandled state mutation.
+
+### Decisions
+1. **Natural Language Pattern Matching (`DefaultAiCapability.kt`):** Expanded `resolveIntent` to recognize diverse navigation prefixes ("go to", "show", "navigate to", "switch to", "open") and app launch prefixes ("launch", "open", "run", "start", "exec").
+2. **Search Integration Helper (`GlobalSearch.kt`):** Added `resolveAiSearchCommand(query, aiCapability)` allowing Global Search UI to evaluate natural language commands alongside deterministic app search.
+3. **Hallucination & Unsupported Operation Prevention:** Unmapped / unsupported natural language phrases ("delete file", "call mom", "format disk") strictly return `null` (resolving to `RemmiCommandResult.Failure`), preventing AI from inventing unsupported operations.
+4. **Verification:** `AiCommandResolutionTest` verifies diverse natural language navigation and app launching variations, Search helper resolution, and strict rejection of unsupported operations.
+
+### Consequences
+- AI natural language resolution operates deterministically and safely, mapping valid requests to established Remmi commands and rejecting unsupported actions.
+
+---
+
+## ADR 021: AI Execution Safety & Command Validation
+
+* **Date:** 2026-10-02
+* **Status:** Accepted
+
+### Context
+Remmi requires explicit command validation (`RemmiAiCommandValidator`), error isolation, and confirmation verification before AI-resolved commands are dispatched to `RemmiController`, preventing execution of malformed or invalid commands and insulating the process against runtime crashes.
+
+### Decisions
+1. **Safety Validator (`RemmiAiCommandValidator.kt`):** Defined `RemmiAiCommandValidator` interface and `DefaultAiCommandValidator` implementation validating `LaunchAppCommand` (ensuring non-blank package/activity names) and `NavigateCommand` (ensuring supported destination IDs).
+2. **Execution Exception Isolation (`DefaultAiCapability.kt`):** Wrapped router execution in `DefaultAiCapability.processInput` within `try-catch`, returning structured `RemmiCommandResult.Failure(reason, cause)` on unexpected exceptions to guarantee process stability.
+3. **Verification:** `AiExecutionSafetyTest` verifies command validation pass/fail criteria, exception safety, and confirmation checks.
+
+### Consequences
+- AI command execution is strictly validated and fault-isolated, preventing invalid commands or execution errors from crashing the launcher.
+
+---
+
+## ADR 022: Isolated Google Authentication Capability Boundary
+
+* **Date:** 2026-10-02
+* **Status:** Accepted
+
+### Context
+Remmi requires a clean capability boundary under `core/android/google/auth/` for Google Authentication (`RemmiGoogleAuthCapability` & `RemmiGoogleAccount`) that isolates account state management and sign-in/sign-out workflows without introducing custom Remmi server backends or violating local-first architecture principles.
+
+### Decisions
+1. **Google Account Identity Model (`RemmiGoogleAccount.kt`):** Defined `data class RemmiGoogleAccount(val accountId: String, val email: String, val displayName: String?)`.
+2. **Auth Capability Interface (`RemmiGoogleAuthCapability.kt`):** Defined interface `RemmiGoogleAuthCapability` in `com.remmi.core.android.google.auth` exposing `currentAccount: StateFlow<RemmiGoogleAccount?>`, `isSignedIn: Boolean`, `signIn(): Boolean`, and `signOut(): Boolean`.
+3. **Local/Capability Implementation (`DefaultGoogleAuthCapability.kt`):** Implemented `DefaultGoogleAuthCapability` encapsulating Google account state transitions off the main thread.
+4. **Host Container Integration (`RemmiHost.kt`):** Added optional `val googleAuthCapability: RemmiGoogleAuthCapability? = null` to `RemmiHost`.
+5. **Verification:** `GoogleAuthCapabilityTest` verifies account sign-in, sign-out, StateFlow emission, and host integration.
+
+### Consequences
+- Google authentication is cleanly isolated behind an Android capability boundary, ready for direct Google service integration without server backends.
+
+---
+
+## ADR 023: Direct Google Service Capability Boundary Architecture
+
+* **Date:** 2026-10-02
+* **Status:** Accepted
+
+### Context
+Remmi requires a clean capability boundary under `core/android/google/` for direct Google service integration (`RemmiGoogleServiceCapability`) that connects directly to Google services (Calendar, Tasks, Contacts) as remote sources of truth without custom Remmi server backends or database sync infrastructure.
+
+### Decisions
+1. **Google Service Capability Contract (`RemmiGoogleServiceCapability.kt`):** Defined interface `RemmiGoogleServiceCapability` in `com.remmi.core.android.google` exposing `authCapability: RemmiGoogleAuthCapability?` and `isServiceAvailable: Boolean` (tracking `authCapability?.isSignedIn`).
+2. **Capability Implementation (`DefaultGoogleServiceCapability.kt`):** Implemented `DefaultGoogleServiceCapability` bound to `RemmiGoogleAuthCapability`.
+3. **Host Container Integration (`RemmiHost.kt`):** Added optional `val googleServiceCapability: RemmiGoogleServiceCapability? = null` to `RemmiHost`.
+4. **Verification:** `GoogleServiceCapabilityTest` verifies service availability tracking against auth state and host integration.
+
+### Consequences
+- Google Service capabilities are cleanly isolated behind an Android capability boundary, enforcing direct client-to-Google communication without server backends.
+
+---
+
+## ADR 024: Google Calendar Service Integration Capability
+
+* **Date:** 2026-10-02
+* **Status:** Accepted
+
+### Context
+Remmi requires direct Google Calendar service integration (`RemmiGoogleCalendarCapability` & `RemmiCalendarEvent`) under `core/android/google/calendar/` to query today's calendar events directly from Google Calendar as the remote source of truth without custom Remmi server backends or database sync infrastructure.
+
+### Decisions
+1. **Calendar Event Model (`RemmiCalendarEvent.kt`):** Defined `data class RemmiCalendarEvent(val id: String, val title: String, val startTimeIso: String, val endTimeIso: String, val isAllDay: Boolean)`.
+2. **Calendar Capability Interface (`RemmiGoogleCalendarCapability.kt`):** Defined interface `RemmiGoogleCalendarCapability` extending `RemmiGoogleServiceCapability`, exposing `todayEvents: StateFlow<List<RemmiCalendarEvent>>` and `refreshTodayEvents(): List<RemmiCalendarEvent>`.
+3. **Capability Implementation (`DefaultGoogleCalendarCapability.kt`):** Implemented `DefaultGoogleCalendarCapability` managing calendar event state and authorization verification (`authCapability.isSignedIn`).
+4. **Host Container Integration (`RemmiHost.kt`):** Added optional `val calendarCapability: RemmiGoogleCalendarCapability? = null` to `RemmiHost`.
+5. **Verification:** `GoogleCalendarCapabilityTest` verifies event fetching when signed in vs signed out, StateFlow emission, and host container integration.
+
+### Consequences
+- Google Calendar capability connects directly to Google Calendar APIs, keeping Google as the remote source of truth without database sync engines.
+
+---
+
+## ADR 025: Local-First Google Data Lifecycle & Offline Caching Architecture
+
+* **Date:** 2026-10-02
+* **Status:** Accepted
+
+### Context
+Remmi requires a clear, local-first data lifecycle policy (`RemmiDataCategory`) and transient local caching boundary for Google Service capabilities, establishing Google as the authoritative remote source of truth, minimal local caching for instant cold boot and offline rendering, and local-only app preferences without introducing relational databases or sync engine frameworks.
+
+### Decisions
+1. **Data Lifecycle Delineation (`RemmiDataCategory.kt`):** Defined enum `RemmiDataCategory` explicitly categorizing data into `REMOTE_SOURCE_OF_TRUTH` (Google Calendar/Tasks/Contacts), `LOCAL_CACHED_STATE` (transient local event cache for instant boot and offline rendering), and `LOCAL_ONLY_STATE` (app preferences, favorites, search history).
+2. **Local-First Fallback (`DefaultGoogleCalendarCapability.kt`):** Updated `DefaultGoogleCalendarCapability` to serve `LOCAL_CACHED_STATE` instantly on cold boot or offline execution, and update the cache when refreshing from `REMOTE_SOURCE_OF_TRUTH`.
+3. **Verification:** `LocalFirstGoogleIntegrationTest` verifies offline event rendering from `LOCAL_CACHED_STATE`, cache updates from `REMOTE_SOURCE_OF_TRUTH`, and isolation of `LOCAL_ONLY_STATE` preferences.
+
+### Consequences
+- Google Service integration operates local-first, serving cached events instantly offline without relying on database sync engines.
+
+---
+
+## ADR 026: First Workspace Implementation (Planning Workspace)
+
+* **Date:** 2026-10-02
+* **Status:** Accepted
+
+### Context
+Remmi requires its first concrete independent feature workspace/plugin — the Planning Workspace (`com.remmi.plugins.planning`), providing task, schedule, and goal management ("Tasks, schedules, & goals") implementing `RemmiPlugin` without Room, SQLite, or custom server backends.
+
+### Decisions
+1. **Plugin Contract Implementation (`PlanningPlugin.kt`):** Implemented `PlanningPlugin` extending `RemmiPlugin` (`id = "planning"`, `name = "Planning Workspace"`).
+2. **Local-First JSON Persistence (`PlanningTaskRepository.kt`):** Implemented `PlanningTaskRepository` storing task state in app-private JSON file storage (`planning_tasks.json`) off the main thread (`Dispatchers.IO`), without database frameworks.
+3. **Workspace Commands & Events:** Defined `CreatePlanningTaskCommand`, `TogglePlanningTaskCommand`, `DeletePlanningTaskCommand`, `PlanningTaskCreatedEvent`, `PlanningTaskUpdatedEvent`, and `PlanningTaskDeletedEvent`.
+4. **Compose UI Integration (`PlanningWorkspaceScreen.kt`):** Created `PlanningWorkspaceScreen` featuring task creation, completion toggles, status filter chips (All, Active, Completed), and Google Calendar schedule preview. Integrated into `WorkspacesScreen`.
+5. **Verification:** `PlanningTaskRepositoryTest` and `PlanningPluginLifecycleTest` verify JSON file persistence, task toggling/deletion, and plugin lifecycle orchestration.
+
+### Consequences
+- Remmi now contains its first functional, local-first Workspace plugin operating cleanly inside the `RemmiPlugin` boundary.
+
+---
+
+## ADR 027: Knowledge Workspace Plugin & Lecture Recorder Recovery Architecture
+
+* **Date:** 2026-10-03
+* **Status:** Accepted
+
+### Context
+Remmi requires an independent Knowledge Workspace (`com.remmi.plugins.knowledge`) containing the Lecture Recorder tool with local-first JSON persistence, live Gemini transcription streaming, and automatic crash/kill session recovery without introducing relational databases or custom server backends.
+
+### Decisions
+1. **Plugin Contract & Data Models:** Implemented `KnowledgePlugin` implementing `RemmiPlugin`. Created `LectureClass`, `Lecture`, and `RecordingState` (`READY`, `RECORDING`, `PAUSED`, `STOPPED`, `SAVING`, `SAVED`, `RECOVERABLE`, `ERROR`).
+2. **Local-First Persistence:** Implemented `ClassRepository` (`lecture_classes.json`) and `LectureRepository` (`lectures.json`) executing off `Dispatchers.IO`.
+3. **Incremental Recovery Checkpointing:** Implemented `LectureRecoveryManager` continuously checkpointing session state to `checkpoint_lecture.json` during active recording, restoring incomplete sessions on startup into `LectureRepository` with `RecordingState.RECOVERABLE`.
+4. **Decoupled Gemini Live Transcription:** Defined `TranscriptionProvider` interface and `GeminiLiveTranscriptionProvider` client with network fault isolation (cloud failures drop connection state without interrupting local audio recording).
+
+### Consequences
+- Complete, resilient Knowledge Workspace operating local-first with zero database bloat and robust crash recovery.
+
+---
+
+## ADR 028: Knowledge Lecture Recorder Subject Redesign
+
+* **Date:** 2026-10-03
+* **Status:** Accepted
+
+### Context
+Remmi requires a redesigned Lecture Recorder experience in the Knowledge Workspace featuring a clean Subject-based hierarchy (`Subject list` -> `Add Subject` -> `Saved Lectures` -> `Add Lecture / Record` & `Saved Lecture Details`) without decorative headers, wasted screen space, or database bloat.
+
+### Decisions
+1. **Data Model Extensions:** Extended `LectureClass` (Subject) with `description: String?` and `language: String` (required default transcription language). Extended `Lecture` with `description: String?`.
+2. **Title/Header Removal:** Removed the decorative "Lecture Recorder" header and subtitle text from `SubjectListScreen.kt`. The tool begins directly with its functional content.
+3. **Dedicated Hierarchy Screens:** Created `SubjectListScreen.kt`, `AddSubjectScreen.kt` (with required Name & Language validation and duplicate protection), `SubjectLecturesScreen.kt`, `SavedLectureDetailsScreen.kt`, and adapted `LectureRecordingScreen.kt`.
+4. **Transcription Language Defaulting:** New lectures in a Subject inherit the Subject's configured language by default.
+
+### Consequences
+- Clean, focused, space-efficient Subject-based Lecture Recorder hierarchy operating local-first with full Gemini Live transcription and recovery support.
+
+---
+
+## ADR 029: Centralized Settings Permissions Architecture
+
+* **Date:** 2026-10-03
+* **Status:** Accepted
+
+### Context
+Remmi requires a dedicated, centralized **Permissions** section in Settings (`Settings` -> `Permissions`) allowing users to inspect and manage Android capability access without scattering permission UI, bypassing Android's security model, or creating generic `PermissionManager` god objects.
+
+### Decisions
+1. **Self-Contained Capability Ownership (`core/android/`):** Permission knowledge lives inside its respective Android capability (`RemmiAudioCapability`, `RemmiAlarmCapability`, `RemmiNotificationCapability`), never in generic god objects or DI frameworks.
+2. **Delineated Permission Types:**
+   - **Runtime Permissions**: Microphone (`RECORD_AUDIO`) & Notifications (`POST_NOTIFICATIONS`). Trigger official `RequestPermission()` activity launchers.
+   - **Special Access**: Exact Alarms (`SCHEDULE_EXACT_ALARM`). Launches system intent (`Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM`).
+3. **Real Android State Refresh**: Queries actual Android system status (`checkSelfPermission`, `canScheduleExactAlarms`) and auto-refreshes on `Lifecycle.Event.ON_RESUME`.
+
+### Consequences
+- Centralized, transparent, zero-leak Android capability inspection and management in Settings adhering to clean architecture rules.
+
+---
+
+## ADR 030: Consolidation of Food Features into Household Workspace & 2-Screen UI Refactoring
+
+* **Date:** 2026-10-07
+* **Status:** Accepted
+
+### Context
+Remmi requires a consolidated workspace structure nesting all food, inventory, recipe, meal, and shopping capabilities under the **Household Workspace** (`WorkspaceDomain.HOUSEHOLD`), streamlining the UI layout from 4 separate screens into 2 primary consolidated screens while preserving strict domain contracts and local-first JSON persistence.
+
+### Decisions
+1. **Workspace Migration (`WorkspacesScreen.kt`):**
+   - Retired the separate top-level `FOOD` workspace domain entry, restoring top-level Workspaces navigation to 6 clean domains (`PLANNING`, `KNOWLEDGE`, `HEALTH`, `TRAVEL`, `HOUSEHOLD`, `PEOPLE`).
+   - Mapped `WorkspaceDomain.HOUSEHOLD` to `HouseholdWorkspaceScreen`.
+2. **2-Screen UI Consolidation (`com.remmi.plugins.food.ui`):**
+   - **Screen 1 (`HouseholdStockShoppingScreen`):** Consolidates Stock/Ingredients, Shopping List/Sessions, and Threshold Configuration under a clean sub-navigation bar (`Stock 📦 | Shopping 🛒 | Thresholds ⚙️`).
+   - **Screen 2 (`HouseholdRecipesMealsScreen`):** Consolidates Recipes management, Cooking engine, and Meal Register/History under a clean sub-navigation bar (`Recipes 🍳 | Meal Register 🍽️`).
+   - **Container (`HouseholdWorkspaceScreen`):** Primary container hosting Screen 1 and Screen 2 via `[ 📦 Stock & Shopping ]  [ 🍳 Recipes & Meals ]`.
+3. **Data Contract Preservation:**
+   - Underlying entities, DAOs, repositories, and persistence models (`FoodRepository`, `Ingredient`, `StockBatch`, `Recipe`, `ShoppingItem`, `MealRecord`) remain 100% intact and decoupled.
+4. **Verification:**
+   - All 350+ automated unit tests pass with 0 failures (`WorkspacesNavigationTest`, `FoodRepositoryTest`, `ShoppingListThresholdsTest`, `FoodSystemEndToEndTest`).
+
+### Consequences
+- Streamlined, elegant 2-screen Household Workspace experience with zero data contract disruption and lightning-fast local performance.
+
+---
+
+## ADR 031: Dual Gemini Connection Modes (Listener/Transcriber & Interactive Chatbox Log Reader)
+
+* **Date:** 2026-10-07
+* **Status:** Accepted
+
+### Context
+Remmi requires two distinct, specialized Gemini connection modes to isolate continuous voice streaming transcription from interactive multi-turn AI chat and system log analysis.
+
+### Decisions
+1. **Connection Mode 1 — Listener & Transcriber (Voice-to-Text):**
+   - Managed via `GeminiLiveTranscriptionProvider` over low-latency WebSocket streaming (`BidiGenerateContent`).
+   - Streams 16kHz PCM microphone audio and emits real-time speech-to-text transcripts into Lecture Recorder and voice inputs.
+2. **Connection Mode 2 — Interactive AI Chatbox & Log Reader:**
+   - Managed via `GeminiChatboxEngine` and `GeminiLogReader`.
+   - **Log Reader (`GeminiLogReader`)**: Captures live recording diagnostics (`RecordingDiagnosticsState`), structured context facts (`StructuredAiContext`), and AI action history logs (`AiPermissionsRepository`).
+   - **Interactive UI (`GeminiChatboxDialog`)**: Jetpack Compose M3 Chat interface featuring log attachment category chips (🔍 All Logs, 🎙️ Live Diagnostics, 📊 System Context, 📜 Action History), chat message threads, and system command execution buttons.
+
+### Consequences
+- Clean separation between passive real-time speech transcription streaming and interactive conversational AI assistance with log analysis capabilities.
+
+---
+
+## ADR 032: Unified JSON Data Storage (`data/`) & Core-Enforced Gemini Write Security Boundary
+
+* **Date:** 2026-10-07
+* **Status:** Accepted
+
+### Context
+Remmi requires all local domain data files to be organized in a single dedicated subfolder (`files/data/`) as clean JSON tables, and enforces a strict security boundary where Gemini reads data for analysis but is prohibited from direct file writes.
+
+### Decisions
+1. **Unified Storage Directory (`files/data/`):**
+   - Centralizes all domain JSON files into `app-private/files/data/`: `calendar.json`, `uncompleted_tasks.json`, `completed_tasks.json`, `ingredients.json`, `recipes.json`, `meals.json`, `shopping_items.json`, `suppliers.json`, `brands.json`, `purchases.json`, etc.
+   - **Automatic Migration (`DataDirectoryMigrator`):** Migrates legacy JSON storage files into `data/` on application startup without data loss.
+2. **Gemini Read-Only Access:**
+   - Gemini is granted **READ-ONLY** access to JSON data files in `data/` to answer user queries and analyze logs.
+3. **Core-Enforced Write Confirmation Boundary:**
+   - Gemini is **STRICTLY PROHIBITED** from writing directly to JSON files or invoking repository save methods.
+   - Any write/add request ("Add task...", "Create event...", "Add ingredient...") causes Gemini to generate a proposed draft template (`PendingDraftAction`).
+   - The UI presents a **User Save Confirmation Popup** (`PendingActionConfirmDialog`) displaying the editable draft.
+   - File writes and repository persistence are executed **strictly by Core Application logic** only upon explicit user confirmation in the popup UI.
+
+### Consequences
+- Standardized, clean local JSON storage topology with automatic legacy migration and absolute user control over AI data modifications.
 

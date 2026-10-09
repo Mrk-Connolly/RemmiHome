@@ -304,7 +304,7 @@ private fun GlobalSearchResultItem(
                 Box(contentAlignment = Alignment.Center) {
                     if (result.appInfo.icon != null) {
                         Image(
-                            bitmap = result.appInfo.icon,
+                            bitmap = result.appInfo.icon!!,
                             contentDescription = result.appInfo.label,
                             modifier = Modifier.fillMaxSize()
                         )
@@ -381,7 +381,7 @@ private fun FavoriteAppItem(
             Box(contentAlignment = Alignment.Center) {
                 if (appInfo.icon != null) {
                     Image(
-                        bitmap = appInfo.icon,
+                        bitmap = appInfo.icon!!,
                         contentDescription = appInfo.label,
                         modifier = Modifier.fillMaxSize()
                     )
